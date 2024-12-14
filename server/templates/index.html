@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sensor Data Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="plot"></div>
+    <script>
+        var data = {{ data | safe }};
+        var trace = {
+            x: [],
+            y: [],
+            type: 'line'
+        };
+        data.forEach(function(d) {
+            trace.x.push(d.timestamp);
+            trace.y.push(d.distance);
+        });
+        var layout = {
+            title: 'Sensor Data',
+            xaxis: {
+                title: 'Timestamp'
+            },
+            yaxis: {
+                title: 'Distance'
+            }
+        };
+        Plotly.newPlot('plot', [trace], layout);
+    </script>
+</body>
+</html>
