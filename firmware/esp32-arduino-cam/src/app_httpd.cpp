@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "esp_http_server.h"
+#include "esp_http_client.h"
 #include "esp_timer.h"
 #include "esp_camera.h"
 #include "img_converters.h"
@@ -19,6 +20,7 @@
 #include "esp32-hal-ledc.h"
 #include "sdkconfig.h"
 #include "camera_index.h"
+#include "credentials.h"
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -683,6 +685,35 @@ static esp_err_t stream_handler(httpd_req_t *req) {
       }
 #endif
     }
+
+    // Send to Server
+    if (res == ESP_OK) {
+        // Send image to Server using HTTP POST
+        char *url = SERVER_IPADDRESS; // Replace with your Server's IP address
+        esp_http_client_config_t config = {
+            .url = url,
+            .method = HTTP_METHOD_POST,
+            //.cert_pem = NULL,
+            //.key_pem = NULL,
+            .timeout_ms = 10000
+        };
+        esp_http_client_handle_t client = esp_http_client_init(&config);
+        esp_err_t err = esp_http_client_perform(client);
+        if (err == ESP_OK) {
+            esp_http_client_set_post_field(client, (const char*) _jpg_buf, _jpg_buf_len);
+            esp_http_client_set_header(client, "Content-Type", "image/jpeg");
+            err = esp_http_client_perform(client);
+            if (err == ESP_OK) {
+                log_e("Image sent to Linux board");
+            } else {
+                log_e("HTTP POST request failed: %s", esp_err_to_name(err));
+            }
+            esp_http_client_cleanup(client);
+        } else {
+           log_e("HTTP client initialization failed: %s", esp_err_to_name(err));
+        }
+    }
+
     if (res == ESP_OK) {
       res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
     }
